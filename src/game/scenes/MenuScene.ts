@@ -11,6 +11,7 @@ import { rememberLevel } from '../progress';
 import { resumableLevel } from '../sim/persist';
 import { createLevelState, type LevelState } from '../sim/state';
 import { createTextButton, type TextButton } from '../ui/textButton';
+import { formatBuildLabel } from '../../platform/updatePolicy';
 import { paintBackdrop } from '../view/backdrop';
 import { theme } from '../view/theme';
 
@@ -26,6 +27,7 @@ export class MenuScene extends Phaser.Scene {
   private title!: Phaser.GameObjects.Text;
   private tagline!: Phaser.GameObjects.Text;
   private hint!: Phaser.GameObjects.Text;
+  private versionText!: Phaser.GameObjects.Text;
   private continueButton!: TextButton;
   private newButton!: TextButton;
   private soundButton!: TextButton;
@@ -46,6 +48,9 @@ export class MenuScene extends Phaser.Scene {
     this.title = this.makeText(theme.ink, 'bold').setDepth(3);
     this.tagline = this.makeText(theme.inkMuted, 'bold').setDepth(3);
     this.hint = this.makeText(theme.inkMuted, 'normal').setDepth(3);
+    this.versionText = this.makeText(theme.inkMuted, 'normal').setDepth(3);
+    this.versionText.setFontSize(12);
+    this.versionText.setText(formatBuildLabel(__APP_VERSION__, __APP_COMMIT__));
     this.continueButton = createTextButton(this, '', () => {
       this.confirmNew = false;
       if (this.savedLevel) {
@@ -213,7 +218,9 @@ export class MenuScene extends Phaser.Scene {
     }
     this.title.setPosition(centerX, panelY + (compact ? 28 : 52));
     this.tagline.setPosition(centerX, panelY + (compact ? 58 : 100));
-    this.hint.setPosition(centerX, panelY + panelHeight - (compact ? 22 : 28));
+    this.hint.setPosition(centerX, panelY + panelHeight - (compact ? 40 : 46));
+    this.versionText.setFontSize(12);
+    this.versionText.setPosition(centerX, panelY + panelHeight - 16);
 
     const gap = 10;
     const buttonH = compact ? 48 : 56;
