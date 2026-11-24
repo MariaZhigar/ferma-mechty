@@ -1,24 +1,35 @@
-import { plantGrass } from './systems/grass';
+import { distance, inYard } from './motion';
 import { buyChicken, collectItem, loadTruck, sendTruck } from './systems/economy';
+import { plantGrass } from './systems/grass';
 import { tapBear } from './systems/predators';
-import { inBounds, type ActionResult, type LevelState } from './state';
+import { tapWell } from './systems/well';
+import { type ActionResult, type LevelState, type TapRadii } from './state';
+import { balance } from '../../data/balance';
 
-export function applyFieldTap(state: LevelState, x: number, y: number): ActionResult {
-  if (state.status !== 'playing' || state.paused || !inBounds(state, x, y)) {
+export function applyFieldTap(
+  state: LevelState,
+  x: number,
+  y: number,
+  radii: TapRadii = { item: balance.itemTapRadius, bear: balance.bearTapRadius },
+): ActionResult {
+  if (state.status !== 'playing' || state.paused || !inYard(x, y)) {
     return { state };
   }
-  if (state.bear && Math.max(Math.abs(state.bear.x - x), Math.abs(state.bear.y - y)) <= 1) {
+  const spot = { x, y };
+  if (state.bear && distance(state.bear, spot) <= radii.bear) {
     return tapBear(state);
   }
-  const item = state.items.find((entry) => entry.x === x && entry.y === y);
-  if (item) {
-    return collectItem(state, item.id);
+  let closest: { id: number; away: number } | null = null;
+  for (const item of state.items) {
+    const away = distance(item, spot);
+    if (away <= radii.item && (closest === null || away < closest.away)) {
+      closest = { id: item.id, away };
+    }
   }
-  const planted = plantGrass(state, x, y);
-  if (planted === state) {
-    return { state };
+  if (closest) {
+    return collectItem(state, closest.id);
   }
-  return { state: planted, notice: 'notice.grass.planted' };
+  return plantGrass(state, x, y);
 }
 
-export { buyChicken, loadTruck, sendTruck };
+export { buyChicken, loadTruck, sendTruck, tapWell };

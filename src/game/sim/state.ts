@@ -18,9 +18,10 @@ export interface Chicken {
   id: number;
   x: number;
   y: number;
+  heading: number;
   hungerMs: number;
   eggMs: number;
-  moveMs: number;
+  wanderMs: number;
 }
 
 export interface GroundItem {
@@ -28,15 +29,23 @@ export interface GroundItem {
   x: number;
   y: number;
   kind: 'egg' | 'cage';
+  ageMs: number;
 }
 
 export interface Bear {
   x: number;
   y: number;
+  heading: number;
   taps: number;
   ageMs: number;
   spoilMs: number;
-  moveMs: number;
+  wanderMs: number;
+}
+
+export interface Well {
+  water: number;
+  filling: boolean;
+  fillingMs: number;
 }
 
 export interface Truck {
@@ -57,8 +66,7 @@ export interface LevelState {
   elapsedMs: number;
   paused: boolean;
   status: LevelStatus;
-  cols: number;
-  rows: number;
+  well: Well;
   grass: GrassPatch[];
   chickens: Chicken[];
   items: GroundItem[];
@@ -72,6 +80,18 @@ export interface LevelState {
 }
 
 export function createLevelState(contentMode: ContentMode = DEFAULT_CONTENT_MODE): LevelState {
+  const chickens: Chicken[] = [];
+  for (let index = 0; index < balance.startingChickens; index += 1) {
+    chickens.push({
+      id: index + 1,
+      x: balance.yardWidth * 0.46 + index * 90,
+      y: balance.yardHeight * 0.52,
+      heading: 0.4,
+      hungerMs: 0,
+      eggMs: 0,
+      wanderMs: 0,
+    });
+  }
   return {
     schemaVersion: SCHEMA_VERSION,
     levelId: LEVEL_ID,
@@ -81,19 +101,9 @@ export function createLevelState(contentMode: ContentMode = DEFAULT_CONTENT_MODE
     elapsedMs: 0,
     paused: false,
     status: 'playing',
-    cols: balance.gridCols,
-    rows: balance.gridRows,
+    well: { water: balance.wellStart, filling: false, fillingMs: 0 },
     grass: [],
-    chickens: [
-      {
-        id: 1,
-        x: 2,
-        y: 2,
-        hungerMs: 0,
-        eggMs: 0,
-        moveMs: 0,
-      },
-    ],
+    chickens,
     items: [],
     warehouseEggs: 0,
     warehouseCages: 0,
@@ -101,7 +111,7 @@ export function createLevelState(contentMode: ContentMode = DEFAULT_CONTENT_MODE
     bear: null,
     nextBearMs: balance.bearFirstMs,
     soldEggs: 0,
-    nextId: 2,
+    nextId: balance.startingChickens + 1,
   };
 }
 
@@ -110,14 +120,19 @@ export interface ActionResult {
   notice?: string;
 }
 
-export function inBounds(state: LevelState, x: number, y: number): boolean {
-  return x >= 0 && y >= 0 && x < state.cols && y < state.rows;
+export interface TapRadii {
+  item: number;
+  bear: number;
 }
 
 export function warehouseUsed(state: LevelState): number {
-  return state.warehouseEggs + state.warehouseCages;
+  return state.warehouseEggs + state.warehouseCages * balance.cageSlots;
 }
 
 export function truckCargo(truck: Truck): number {
-  return truck.eggs + truck.cages;
+  return truck.eggs + truck.cages * balance.cageSlots;
+}
+
+export function cageOnGround(state: LevelState): boolean {
+  return state.items.some((item) => item.kind === 'cage');
 }

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { resumableLevel } from '../src/game/sim/persist';
+import { createLevelState } from '../src/game/sim/state';
 import {
   defaultProgress,
   defaultSettings,
@@ -22,7 +24,7 @@ describe('save schema', () => {
     });
     expect(defaultProgress().schemaVersion).toBe(SCHEMA_VERSION);
     expect(defaultProgress().activeLevel).toBeNull();
-    expect(SCHEMA_VERSION).toBe(2);
+    expect(SCHEMA_VERSION).toBe(3);
   });
 
   it('migrates a versionless settings blob and keeps kids as the default mode', () => {
@@ -31,7 +33,7 @@ describe('save schema', () => {
       ok: true,
       migrated: true,
       value: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         language: 'en',
         contentMode: 'kids',
         soundEnabled: false,
@@ -70,12 +72,91 @@ describe('save schema', () => {
       ok: true,
       migrated: true,
       value: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         bestMedals: { 'level-1': 'bronze' },
         unlockedAnimals: ['chicken'],
         unlockedBuildings: [],
         activeLevel: null,
       },
+    });
+  });
+
+  it('drops a schema-2 grid run and keeps medals and settings', () => {
+    const progress = parseProgress({
+      schemaVersion: 2,
+      bestMedals: { 'level-1': 'silver' },
+      unlockedAnimals: ['chicken'],
+      unlockedBuildings: ['warehouse'],
+      activeLevel: {
+        levelId: 'level-1',
+        state: {
+          schemaVersion: 2,
+          levelId: 'level-1',
+          status: 'playing',
+          cols: 6,
+          rows: 6,
+          grass: [{ id: 1, x: 1, y: 1, growthMs: 0 }],
+        },
+      },
+    });
+    expect(progress).toEqual({
+      ok: true,
+      migrated: true,
+      value: {
+        schemaVersion: 3,
+        bestMedals: { 'level-1': 'silver' },
+        unlockedAnimals: ['chicken'],
+        unlockedBuildings: ['warehouse'],
+        activeLevel: null,
+      },
+    });
+    expect(
+      resumableLevel({
+        schemaVersion: 2,
+        levelId: 'level-1',
+        status: 'playing',
+        cols: 6,
+        rows: 6,
+      }),
+    ).toBeNull();
+
+    const settings = parseSettings({
+      schemaVersion: 2,
+      language: 'en',
+      contentMode: 'regular',
+      soundEnabled: false,
+    });
+    expect(settings).toEqual({
+      ok: true,
+      migrated: true,
+      value: {
+        schemaVersion: 3,
+        language: 'en',
+        contentMode: 'regular',
+        soundEnabled: false,
+      },
+    });
+  });
+
+  it('keeps an unfinished schema-3 run', () => {
+    const state = createLevelState();
+    const parsed = parseProgress({
+      schemaVersion: 3,
+      bestMedals: { 'level-1': 'gold' },
+      unlockedAnimals: [],
+      unlockedBuildings: [],
+      activeLevel: { levelId: 'level-1', state },
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) {
+      return;
+    }
+    expect(parsed.migrated).toBe(false);
+    expect(parsed.value.bestMedals).toEqual({ 'level-1': 'gold' });
+    expect(resumableLevel(parsed.value.activeLevel?.state)).toMatchObject({
+      levelId: 'level-1',
+      status: 'playing',
+      well: { water: state.well.water },
     });
   });
 
@@ -92,7 +173,7 @@ describe('save schema', () => {
     expect(again).toMatchObject({
       ok: true,
       migrated: false,
-      value: { language: 'en', contentMode: 'kids', schemaVersion: 2 },
+      value: { language: 'en', contentMode: 'kids', schemaVersion: 3 },
     });
   });
 });

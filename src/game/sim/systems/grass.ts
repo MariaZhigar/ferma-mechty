@@ -1,5 +1,6 @@
 import { balance } from '../../../data/balance';
-import { inBounds, type LevelState } from '../state';
+import { distance, inPlantable } from '../motion';
+import type { ActionResult, LevelState } from '../state';
 
 export function tickGrass(state: LevelState, dt: number): LevelState {
   if (state.grass.length === 0) {
@@ -14,19 +15,30 @@ export function tickGrass(state: LevelState, dt: number): LevelState {
   };
 }
 
-export function plantGrass(state: LevelState, x: number, y: number): LevelState {
-  if (state.status !== 'playing' || state.paused || !inBounds(state, x, y)) {
-    return state;
+export function plantGrass(state: LevelState, x: number, y: number): ActionResult {
+  if (state.status !== 'playing' || state.paused || !inPlantable(x, y)) {
+    return { state };
   }
-  if (state.grass.some((patch) => patch.x === x && patch.y === y)) {
-    return state;
+  if (state.well.water < 1) {
+    return { state, notice: 'notice.well.empty' };
   }
-  if (state.items.some((item) => item.x === x && item.y === y)) {
-    return state;
+  if (state.grass.length >= balance.maxGrass) {
+    return { state, notice: 'notice.grass.full' };
+  }
+  const spot = { x, y };
+  if (state.grass.some((patch) => distance(patch, spot) < balance.grassSpacing)) {
+    return { state, notice: 'notice.grass.crowded' };
+  }
+  if (state.items.some((item) => distance(item, spot) < balance.plantClearance)) {
+    return { state, notice: 'notice.grass.blocked' };
   }
   return {
-    ...state,
-    nextId: state.nextId + 1,
-    grass: [...state.grass, { id: state.nextId, x, y, growthMs: 0 }],
+    state: {
+      ...state,
+      nextId: state.nextId + 1,
+      well: { ...state.well, water: state.well.water - 1 },
+      grass: [...state.grass, { id: state.nextId, x, y, growthMs: 0 }],
+    },
+    notice: 'notice.grass.planted',
   };
 }
