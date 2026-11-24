@@ -5,7 +5,7 @@ import '@fontsource/nunito/latin-700.css';
 import Phaser from 'phaser';
 import { createGame } from './game/createGame';
 import { installGameInputGuards } from './game/input/guards';
-import { registerPwa } from './platform/pwa';
+import { installUpdateListener, registerPwa } from './platform/pwa';
 import { loadSettings } from './platform/settingsStorage';
 import './styles/global.css';
 
@@ -14,6 +14,8 @@ declare global {
     __FERMA_GAME__?: Phaser.Game;
   }
 }
+
+installUpdateListener();
 
 async function start(): Promise<void> {
   installGameInputGuards();

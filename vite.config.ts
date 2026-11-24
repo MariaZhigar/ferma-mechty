@@ -1,10 +1,23 @@
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import packageJson from './package.json' with { type: 'json' };
+
+const commit =
+  process.env.GITHUB_SHA?.slice(0, 7) ||
+  execSync('git rev-parse --short=7 HEAD', { encoding: 'utf8' }).trim();
 
 export default defineConfig({
   base: '/ferma-mechty/',
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_COMMIT__: JSON.stringify(commit),
+  },
   plugins: [
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'prompt',
       injectRegister: false,
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'offline.html'],
@@ -24,9 +37,9 @@ export default defineConfig({
           { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,webmanifest}'],
-        navigateFallback: 'index.html',
+        globIgnores: ['**/index.html'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),
