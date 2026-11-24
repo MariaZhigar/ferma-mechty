@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export type LocaleId = 'ru' | 'en';
 export type ContentMode = 'kids' | 'regular';
@@ -11,11 +11,18 @@ export interface Settings {
   soundEnabled: boolean;
 }
 
+export interface ActiveLevel {
+  levelId: string;
+  state: unknown;
+}
+
 export interface CampaignProgress {
   schemaVersion: number;
   bestMedals: Record<string, Medal>;
   unlockedAnimals: string[];
   unlockedBuildings: string[];
+  /** Unfinished M1 run. Absent on a schema-1 save and filled in by migration. */
+  activeLevel: ActiveLevel | null;
 }
 
 export type LoadResult<T> =
@@ -36,6 +43,7 @@ export function defaultProgress(): CampaignProgress {
     bestMedals: {},
     unlockedAnimals: [],
     unlockedBuildings: [],
+    activeLevel: null,
   };
 }
 
@@ -83,6 +91,7 @@ export function parseProgress(raw: unknown): LoadResult<CampaignProgress> {
       bestMedals: readMedals(raw.bestMedals),
       unlockedAnimals: readStrings(raw.unlockedAnimals),
       unlockedBuildings: readStrings(raw.unlockedBuildings),
+      activeLevel: readActiveLevel(raw.activeLevel),
     },
   };
 }
@@ -106,6 +115,13 @@ function readMedals(value: unknown): Record<string, Medal> {
     }
   }
   return medals;
+}
+
+function readActiveLevel(value: unknown): ActiveLevel | null {
+  if (!isRecord(value) || typeof value.levelId !== 'string' || !isRecord(value.state)) {
+    return null;
+  }
+  return { levelId: value.levelId, state: value.state };
 }
 
 function readStrings(value: unknown): string[] {

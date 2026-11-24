@@ -21,7 +21,8 @@ describe('save schema', () => {
       soundEnabled: true,
     });
     expect(defaultProgress().schemaVersion).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(1);
+    expect(defaultProgress().activeLevel).toBeNull();
+    expect(SCHEMA_VERSION).toBe(2);
   });
 
   it('migrates a versionless settings blob and keeps kids as the default mode', () => {
@@ -30,7 +31,7 @@ describe('save schema', () => {
       ok: true,
       migrated: true,
       value: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         language: 'en',
         contentMode: 'kids',
         soundEnabled: false,
@@ -58,6 +59,26 @@ describe('save schema', () => {
     expect(storage.snapshot()['ferma-mechty.settings']).toBe(JSON.stringify(newer));
   });
 
+  it('migrates an M0 progress record and keeps the medal', () => {
+    const parsed = parseProgress({
+      schemaVersion: 1,
+      bestMedals: { 'level-1': 'bronze' },
+      unlockedAnimals: ['chicken'],
+      unlockedBuildings: [],
+    });
+    expect(parsed).toEqual({
+      ok: true,
+      migrated: true,
+      value: {
+        schemaVersion: 2,
+        bestMedals: { 'level-1': 'bronze' },
+        unlockedAnimals: ['chicken'],
+        unlockedBuildings: [],
+        activeLevel: null,
+      },
+    });
+  });
+
   it('writes defaults on the first launch and round-trips a language change', () => {
     const storage = memoryStorage();
     const loaded = loadSettingsFrom(storage);
@@ -71,7 +92,7 @@ describe('save schema', () => {
     expect(again).toMatchObject({
       ok: true,
       migrated: false,
-      value: { language: 'en', contentMode: 'kids', schemaVersion: 1 },
+      value: { language: 'en', contentMode: 'kids', schemaVersion: 2 },
     });
   });
 });

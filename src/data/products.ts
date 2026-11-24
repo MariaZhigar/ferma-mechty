@@ -1,4 +1,6 @@
 import type { ProductDef } from './types';
 
-/** Empty until products are approved. Meat entries must set meat: true. */
-export const products: readonly ProductDef[] = [];
+export const products: readonly ProductDef[] = [
+  { id: 'egg', nameKey: 'entity.egg', meat: false },
+  { id: 'cage', nameKey: 'entity.cage', meat: false },
+];
