@@ -4,8 +4,23 @@ import ru from './ru.json';
 
 const dictionaries: Record<LocaleId, Record<string, string>> = { ru, en };
 
-export function translate(locale: LocaleId, key: string): string {
-  return lookup(dictionaries, locale, key);
+export function translate(
+  locale: LocaleId,
+  key: string,
+  vars?: Readonly<Record<string, string | number>>,
+): string {
+  return fill(lookup(dictionaries, locale, key), vars);
+}
+
+function fill(text: string, vars?: Readonly<Record<string, string | number>>): string {
+  if (!vars) {
+    return text;
+  }
+  let filled = text;
+  for (const [name, value] of Object.entries(vars)) {
+    filled = filled.replaceAll(`{${name}}`, String(value));
+  }
+  return filled;
 }
 
 export function lookup(

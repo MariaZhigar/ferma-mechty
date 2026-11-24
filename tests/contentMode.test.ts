@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { isEntryVisible, isMeatContentAllowed } from '../src/game/sim/systems/contentMode';
 import { resolveGoal } from '../src/game/sim/systems/goals';
-import { createLevelState, SIM_STEP_MS, stepLevel } from '../src/game/sim/state';
+import { createLevelState, SIM_STEP_MS } from '../src/game/sim/state';
+import { stepLevel } from '../src/game/sim/step';
 
 describe('content mode', () => {
   it('hides meat in kids mode and keeps it in regular mode', () => {
