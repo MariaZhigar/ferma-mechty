@@ -25,7 +25,9 @@
   "hud.send": "Send",
   "hud.buy": "Hen {price}",
   "hud.pause": "Pause",
-  "hud.hint": "Tap the ground to plant grass",
+  "hud.hint": "Tap the meadow to plant grass",
+  "hud.hint.well": "Tap the well to draw water",
+  "hud.water": "{water}/{cap}",
   "pause.title": "Paused",
   "pause.resume": "Resume",
   "pause.menu": "Menu",
@@ -42,6 +44,13 @@
   "entity.egg": "Egg",
   "entity.cage": "Cage",
   "notice.grass.planted": "Grass planted",
+  "notice.grass.crowded": "Grass is already growing here",
+  "notice.grass.full": "The meadow is full",
+  "notice.grass.blocked": "Collect what's lying here first",
+  "notice.well.empty": "Draw water first",
+  "notice.well.full": "The well is full",
+  "notice.well.poor": "Not enough coins for water",
+  "notice.well.filling": "The well is filling",
   "notice.egg.collected": "Egg stored",
   "notice.cage.collected": "Cage stored",
   "notice.warehouse.full": "The store is full",
@@ -51,5 +60,7 @@
   "notice.chicken.bought": "A hen is in the yard",
   "notice.chicken.poor": "Not enough money",
   "notice.chicken.full": "The yard is full",
-  "notice.bear.caged": "The bear is caged"
+  "notice.bear.caged": "The bear is caged",
+  "notice.bear.escaped": "The bear broke out",
+  "notice.cage.slots": "The cage needs {slots} free slots"
 }

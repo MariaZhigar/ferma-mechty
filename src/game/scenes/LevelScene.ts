@@ -9,12 +9,18 @@ import { readSafeArea } from '../../platform/safeArea';
 import { loadSettings, saveSettings } from '../../platform/settingsStorage';
 import { setActiveScene } from '../../platform/session';
 import { clearLevel, recordWin, rememberLevel } from '../progress';
-import { applyFieldTap, buyChicken, loadTruck, sendTruck } from '../sim/actions';
+import { applyFieldTap, buyChicken, loadTruck, sendTruck, tapWell } from '../sim/actions';
 import { medalForWin } from '../sim/systems/goals';
 import { createLevelState, truckCargo, warehouseUsed, type LevelState } from '../sim/state';
 import { stepLevel } from '../sim/step';
 import { createTextButton, type TextButton } from '../ui/textButton';
-import { cellAt, layoutLevel, type LevelLayout } from '../view/levelLayout';
+import {
+  hitWell,
+  layoutLevel,
+  pointerRadius,
+  screenToMeadow,
+  type LevelLayout,
+} from '../view/levelLayout';
 import { paintLevel } from '../view/levelView';
 import { theme } from '../view/theme';
 
@@ -41,6 +47,7 @@ export class LevelScene extends Phaser.Scene {
   private warehouseText!: Phaser.GameObjects.Text;
   private chickenText!: Phaser.GameObjects.Text;
   private truckText!: Phaser.GameObjects.Text;
+  private waterText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private noticeText!: Phaser.GameObjects.Text;
   private pauseTitle!: Phaser.GameObjects.Text;
@@ -90,7 +97,10 @@ export class LevelScene extends Phaser.Scene {
     this.warehouseText = this.makeText(11, 0, 0);
     this.chickenText = this.makeText(11, 0.5, 0);
     this.truckText = this.makeText(11, 1, 0);
-    this.hintText = this.makeText(11, 0.5, 0.5);
+    this.waterText = this.makeText(15, 0.5, 0.5);
+    this.waterText.setColor('#143044');
+    this.waterText.setStroke('#f4fbff', 4);
+    this.hintText = this.makeText(13, 0.5, 0);
     this.noticeText = this.makeText(14, 0.5, 0.5).setDepth(15);
     this.pauseTitle = this.makeText(18, 0.5, 0.5).setDepth(30);
 
@@ -125,8 +135,18 @@ export class LevelScene extends Phaser.Scene {
     if (!document.hidden && !this.userPaused) {
       const before = this.state.status;
       const hens = this.state.chickens.length;
+      const caged = this.state.items.some((item) => item.kind === 'cage');
+      const bearBefore = this.state.bear !== null;
       this.state = stepLevel(this.state, delta);
-      if (this.state.chickens.length < hens) {
+      const escaped =
+        caged &&
+        !bearBefore &&
+        this.state.bear !== null &&
+        !this.state.items.some((item) => item.kind === 'cage');
+      if (escaped) {
+        this.notice = translate(this.settings.language, 'notice.bear.escaped');
+        this.noticeUntil = time + 1800;
+      } else if (this.state.chickens.length < hens) {
         this.notice = translate(this.settings.language, 'notice.chicken.died');
         this.noticeUntil = time + 2200;
       }
@@ -164,11 +184,20 @@ export class LevelScene extends Phaser.Scene {
     if (!this.ready || this.userPaused || this.finished || !this.layoutData || objects.length > 0) {
       return;
     }
-    const cell = cellAt(this.layoutData, pointer.x, pointer.y);
-    if (!cell) {
+    if (hitWell(this.layoutData, pointer.x, pointer.y)) {
+      this.runAction(tapWell(this.state));
       return;
     }
-    this.runAction(applyFieldTap(this.state, cell.x, cell.y));
+    const point = screenToMeadow(this.layoutData, pointer.x, pointer.y);
+    if (!point) {
+      return;
+    }
+    this.runAction(
+      applyFieldTap(this.state, point.x, point.y, {
+        item: pointerRadius(this.layoutData, 48, 76, balance.itemTapRadius),
+        bear: pointerRadius(this.layoutData, 64, 96, balance.bearTapRadius),
+      }),
+    );
   }
 
   private runAction(result: { state: LevelState; notice?: string }): void {
@@ -178,7 +207,9 @@ export class LevelScene extends Phaser.Scene {
     const changed = result.state !== this.state;
     this.state = result.state;
     if (result.notice) {
-      this.notice = translate(this.settings.language, result.notice);
+      this.notice = translate(this.settings.language, result.notice, {
+        slots: balance.cageSlots,
+      });
       this.noticeUntil = this.time.now + 1400;
       if (changed && this.settings.soundEnabled) {
         playBlip(true);
@@ -266,7 +297,7 @@ export class LevelScene extends Phaser.Scene {
     if (width < 2 || height < 2) {
       return;
     }
-    const layout = layoutLevel(width, height, readSafeArea(), this.state.cols, this.state.rows);
+    const layout = layoutLevel(width, height, readSafeArea());
     this.layoutData = layout;
     const place = (button: TextButton, slot: LevelLayout['load'], font: number): void => {
       button.layout(slot.x, slot.y, slot.w, slot.h, font);
@@ -282,6 +313,8 @@ export class LevelScene extends Phaser.Scene {
     this.warehouseText.setPosition(layout.warehouse.x, layout.warehouse.y);
     this.chickenText.setPosition(layout.chickens.x, layout.chickens.y);
     this.truckText.setPosition(layout.truck.x, layout.truck.y);
+    this.waterText.setPosition(layout.well.x, layout.well.y + layout.well.r * 0.18);
+    this.waterText.setFontSize(Math.max(13, Math.round(layout.well.r * 0.38)));
     this.hintText.setPosition(layout.hint.x, layout.hint.y);
     this.noticeText.setPosition(width / 2, layout.fieldY + layout.fieldH / 2);
     this.pauseTitle.setPosition(width / 2, height * 0.28);
@@ -329,19 +362,22 @@ export class LevelScene extends Phaser.Scene {
             cap: balance.truckCapacity,
           }),
     );
-    const gridBottom = this.layoutData.originY + this.layoutData.cell * this.layoutData.rows;
-    const hintY = this.layoutData.originY - 16;
-    const showHint =
-      this.state.grass.length === 0 &&
-      this.state.elapsedMs < 12000 &&
-      hintY > this.layoutData.goal.y + 28 &&
-      gridBottom < this.scale.height;
-    this.hintText.setOrigin(0.5, 1);
-    this.hintText.setPosition(
-      this.layoutData.originX + (this.layoutData.cell * this.layoutData.cols) / 2,
-      hintY,
+    this.hintText.setWordWrapWidth(Math.max(80, this.layoutData.meadow.w - 24));
+    const needWater = this.state.well.water === 0 && !this.state.well.filling;
+    const showPlant = this.state.grass.length === 0 && this.state.elapsedMs < 20000;
+    this.hintText.setText(
+      needWater
+        ? translate(locale, 'hud.hint.well')
+        : showPlant
+          ? translate(locale, 'hud.hint')
+          : '',
     );
-    this.hintText.setText(showHint ? translate(locale, 'hud.hint') : '');
+    this.waterText.setText(
+      translate(locale, 'hud.water', {
+        water: this.state.well.water,
+        cap: balance.wellCapacity,
+      }),
+    );
     this.noticeText.setText(this.notice);
     this.loadButton.setLabel(translate(locale, 'hud.load'));
     this.sendButton.setLabel(translate(locale, 'hud.send'));

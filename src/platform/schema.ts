@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export type LocaleId = 'ru' | 'en';
 export type ContentMode = 'kids' | 'regular';
@@ -21,7 +21,10 @@ export interface CampaignProgress {
   bestMedals: Record<string, Medal>;
   unlockedAnimals: string[];
   unlockedBuildings: string[];
-  /** Unfinished M1 run. Absent on a schema-1 save and filled in by migration. */
+  /**
+   * Unfinished run. Schema 1 had none. A schema 2 grid run is dropped on the way to schema 3:
+   * the meadow is no longer a 6×6 board, so that snapshot cannot be resumed.
+   */
   activeLevel: ActiveLevel | null;
 }
 
@@ -91,7 +94,7 @@ export function parseProgress(raw: unknown): LoadResult<CampaignProgress> {
       bestMedals: readMedals(raw.bestMedals),
       unlockedAnimals: readStrings(raw.unlockedAnimals),
       unlockedBuildings: readStrings(raw.unlockedBuildings),
-      activeLevel: readActiveLevel(raw.activeLevel),
+      activeLevel: version >= 3 ? readActiveLevel(raw.activeLevel) : null,
     },
   };
 }

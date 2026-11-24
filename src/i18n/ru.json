@@ -25,7 +25,9 @@
   "hud.send": "Отправить",
   "hud.buy": "Курица {price}",
   "hud.pause": "Пауза",
-  "hud.hint": "Нажмите на землю — посадите траву",
+  "hud.hint": "Нажмите на луг — посадите траву",
+  "hud.hint.well": "Нажмите на колодец — наберите воду",
+  "hud.water": "{water}/{cap}",
   "pause.title": "Пауза",
   "pause.resume": "Дальше",
   "pause.menu": "В меню",
@@ -42,6 +44,13 @@
   "entity.egg": "Яйцо",
   "entity.cage": "Клетка",
   "notice.grass.planted": "Трава посажена",
+  "notice.grass.crowded": "Здесь уже растёт трава",
+  "notice.grass.full": "На лугу нет места",
+  "notice.grass.blocked": "Сначала соберите, что лежит здесь",
+  "notice.well.empty": "Сначала наберите воду",
+  "notice.well.full": "Колодец полон",
+  "notice.well.poor": "Нет монет на воду",
+  "notice.well.filling": "Колодец наполняется",
   "notice.egg.collected": "Яйцо на складе",
   "notice.cage.collected": "Клетка на складе",
   "notice.warehouse.full": "Склад полон",
@@ -51,5 +60,7 @@
   "notice.chicken.bought": "Курица на дворе",
   "notice.chicken.poor": "Не хватает денег",
   "notice.chicken.full": "Двор полон",
-  "notice.bear.caged": "Медведь в клетке"
+  "notice.bear.caged": "Медведь в клетке",
+  "notice.bear.escaped": "Медведь вырвался",
+  "notice.cage.slots": "Клетке нужно {slots} места на складе"
 }
